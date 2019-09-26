@@ -23,6 +23,8 @@
    Copyright (C) 2017 [Deepak Kumar](https://www.kreatio.com)
 ###
 
+zlib = require('zlib')
+
 # @mixin
 #
 # @private
@@ -567,6 +569,31 @@ class Client
   send: (destination, headers={}, body='') ->
     headers.destination = destination
     @_transmit "SEND", headers, body
+
+  gzipSend: (destination, headers={}, body) ->
+    if !body
+      return;
+
+    lines = ['SEND']
+    lines.push('destination:' + destination);
+    lines.push('compression:gzip');
+    lines.push('content-type:application/gzip');
+
+    for own name, value of @headers
+      if @escapeHeaderValues
+        lines.push("#{name}:#{Frame.frEscape(value)}")
+      else
+        lines.push("#{name}:#{value}")
+
+    zippedBuffer = zlib.gzipSync(Buffer.from(body));
+    lines.push('content-length:' + Buffer.byteLength(zippedBuffer));
+
+    buffers = [];
+    buffers.push(Buffer.from(lines.join(Byte.LF) + Byte.LF + Byte.LF));
+    buffers.push(zippedBuffer);
+    buffers.push(Buffer.from(Byte.NULL));
+
+    @ws.send(new Uint8Array(Buffer.concat(buffers)).buffer)
 
   # @see http://stomp.github.com/stomp-specification-1.2.html#SUBSCRIBE SUBSCRIBE Frame
   #
