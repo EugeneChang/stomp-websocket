@@ -494,7 +494,10 @@ class Client
       @debug?('Web Socket Opened...')
       headers["accept-version"] = Stomp.VERSIONS.supportedVersions()
       headers["heart-beat"] = [@heartbeat.outgoing, @heartbeat.incoming].join(',')
-      @_transmit "CONNECT", headers
+      try
+        @_transmit "CONNECT", headers
+      catch error
+        errorCallback?(error)
 
   #
   # @private
